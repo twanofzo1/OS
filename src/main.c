@@ -71,39 +71,11 @@ void kmain(void) {
     Terminal terminal;
     terminal_initialize(&terminal, 50, 50, TERMINAL_WIDTH, TERMINAL_HEIGHT);
     terminal_put_string(&terminal, "Hello, World! this is some text\n");
+    terminal_draw(&terminal);
+    pit_sleep_ms(1000);
 
-    uint64_t null_descriptor = create_descriptor(0, 0, 0);
-    uint64_t kernel_code_segment = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL0));
-    uint64_t kernel_data_segment = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL0));
-    uint64_t user_code_segment = create_descriptor(0, 0x000FFFFF, (GDT_CODE_PL3));
-    uint64_t user_data_segment = create_descriptor(0, 0x000FFFFF, (GDT_DATA_PL3));
-
-    char buffer[50];
-    itohexstr(null_descriptor, buffer);
-    terminal_put_string(&terminal, "Null Descriptor: 0x");
-    terminal_put_string(&terminal, buffer);
-    terminal_put_string(&terminal, "\n");
-
-    itohexstr(kernel_code_segment, buffer);
-    terminal_put_string(&terminal, "Kernel Code Segment: 0x");
-    terminal_put_string(&terminal, buffer);
-    terminal_put_string(&terminal, "\n");
-
-    itohexstr(kernel_data_segment, buffer);
-    terminal_put_string(&terminal, "Kernel Data Segment: 0x");
-    terminal_put_string(&terminal, buffer);
-    itohexstr(user_code_segment, buffer);
-    terminal_put_string(&terminal, "\n");
-
-    terminal_put_string(&terminal, "User Code Segment: 0x");
-    terminal_put_string(&terminal, buffer);
-    itohexstr(user_data_segment, buffer);
-    terminal_put_string(&terminal, "\n");
-
-    terminal_put_string(&terminal, "User Data Segment: 0x");
-    terminal_put_string(&terminal, buffer);
-    terminal_put_string(&terminal, "\n");
-
+    gdt_initialize();
+    
 
     while (1) {
         graphics_clear(0x00000F); // Fill screen with black

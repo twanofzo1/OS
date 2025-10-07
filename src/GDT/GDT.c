@@ -1,5 +1,8 @@
 #include "GDT.h"
 
+extern void setGdt(uint16_t limit, uint64_t base);
+extern void reloadSegments(void);
+
 uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag)
 {
     uint64_t descriptor;
@@ -19,3 +22,19 @@ uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag)
 
     return descriptor;
 }
+uint64_t gdt_table[5];
+
+void gdt_initialize() {
+    gdt_table[0] = create_descriptor(0, 0, 0);                  // Null
+    gdt_table[1] = create_descriptor(0, 0xFFFFF, GDT_CODE_PL0); // Kernel code
+    gdt_table[2] = create_descriptor(0, 0xFFFFF, GDT_DATA_PL0); // Kernel data
+    gdt_table[3] = create_descriptor(0, 0xFFFFF, GDT_CODE_PL3); // User code
+    gdt_table[4] = create_descriptor(0, 0xFFFFF, GDT_DATA_PL3); // User data
+
+    extern void setGdt(uint16_t limit, uint64_t base);
+    extern void reloadSegments(void);
+
+    setGdt(sizeof(gdt_table) - 1, (uint64_t)&gdt_table);
+    reloadSegments();
+}
+
