@@ -1,108 +1,53 @@
-#pragma once
-
-/*
-readme:
-https://wiki.osdev.org/Global_Descriptor_Table
-This is the Global Descriptor Table (GDT) implementation for the x86 architecture.
-It provides a mechanism for defining the characteristics of various memory segments
-and is essential for implementing memory protection and multitasking in the operating system.
-
-The GDT is used to define the various segments of memory, including code segments, data segments, and stack segments. 
-Each segment has its own set of attributes, such as base address, limit, and access rights.
-
-Access Byte:
-bit :       7	6	5	4	3	2	1	0
-function:   P	DPL	    S	E	DC	RW	A
-
-P: Present (1 = segment is present in memory, 0 = segment is not present)
-DPL: 0 = highest privilege (kernel), 3 = lowest privilege (user applications).
-S: Descriptor Type (0 = system, 1 = code or data) 
-E: Executable (1 = code segment, 0 = data segment) if the code is executable
-DC: Direction/Conforming 
-    0 = cant be executed from a lesser privilege level, 
-    1 = can be executed from a lesser privilege level 
-RW:
-    read/write
-    if code segment: 0 = read-only, 1 = read and execute
-    if data segment: 0 = read-only, 1 = read and write
-
-A = Accessed (set by CPU when segment is accessed) default 0
-
-
-access byte for each segment:
-segment 0 null segment:        
-    P   : 0         not present
-    DPL : 00 (0)    highest privilege level (kernel)
-    S   : 0         system segment         
-    E   : 0         not executable (data segment)
-    DC  : 0         can be executed from a lesser privilege level
-    RW  : 0         read only
-    A   : 0         not accessed
-    binary: 0b00000000
-    hex: 0x00
-
-segment 1 kernel code segment:
-    P   : 1         is present
-    DPL : 00 (0)    highest privilege level (kernel)
-    S   : 1         (code/data) -> code segment
-    E   : 1         executable (code segment)
-    DC  : 1         can be executed from a lesser privilege level  
-    RW  : 1         read and execute
-    A   : 0         not accessed
-    binary: 0b10011110
-    hex: 0x9E
-
-segment 2 kernel data segment: 
-    P   : 1         is present
-    DPL : 00 (0)    highest privilege level (kernel)
-    S   : 1         (code/data) -> data segment
-    E   : 0         not executable (data segment)
-    DC  : 0         cant be executed from a lesser privilege level (not code segment)
-    RW  : 1         read/write
-    A   : 0         not accessed
-    binary: 0b10010010
-    hex: 0x92
-
-segment 3 user code segment:   
-    P   : 1         is present
-    DPL : 11 (3)    user privilege level 
-    S   : 1         (code/data) -> code segment
-    E   : 1         executable (code segment)
-    DC  : 1         can be executed from a lesser privilege level (doesnt matter for user code segment)
-    RW  : 1         read and execute
-    A   : 0         not accessed
-    binary: 0b11111110
-    hex: 0xFE
-
-segment 4 user data segment:
-    P   : 1         is present
-    DPL : 11 (3)    user privilege level 
-    S   : 1         (code/data) -> data segment
-    E   : 0         not executable (data segment)
-    DC  : 0         cant be executed from a lesser privilege level (not code segment)
-    RW  : 1         read and write
-    A   : 0         not accessed
-    binary: 0b11110010
-    hex: 0xF2
-
-segment 5 TSS segment:
-    P   : 1         is present
-    DPL : 00 (0)    highest privilege level (kernel)
-    S   : 0         system segment         
-    E   : 1         executable 
-    DC  : 0         can be executed from a lesser privilege level
-    RW  : 0         read only
-    A   : 1         accessed
-    binary: 0b10001001
-    hex: 0x89
-*/
-//https://wiki.osdev.org/GDT_Tutorial
-
-
-
-
-// TODO implement GDT
-
-
+#pragma once 
+#include <stdio.h>
 #include <stdint.h>
+ #include "../terminal/terminal.h"
 
+// Each define here is for a specific flag in the descriptor.
+// Refer to the intel documentation for a description of what each one does.
+#define SEG_DESCTYPE(x)  ((x) << 0x04) // Descriptor type (0 for system, 1 for code/data)
+#define SEG_PRES(x)      ((x) << 0x07) // Present
+#define SEG_SAVL(x)      ((x) << 0x0C) // Available for system use
+#define SEG_LONG(x)      ((x) << 0x0D) // Long mode
+#define SEG_SIZE(x)      ((x) << 0x0E) // Size (0 for 16-bit, 1 for 32)
+#define SEG_GRAN(x)      ((x) << 0x0F) // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
+#define SEG_PRIV(x)     (((x) &  0x03) << 0x05)   // Set privilege level (0 - 3)
+ 
+#define SEG_DATA_RD        0x00 // Read-Only
+#define SEG_DATA_RDA       0x01 // Read-Only, accessed
+#define SEG_DATA_RDWR      0x02 // Read/Write
+#define SEG_DATA_RDWRA     0x03 // Read/Write, accessed
+#define SEG_DATA_RDEXPD    0x04 // Read-Only, expand-down
+#define SEG_DATA_RDEXPDA   0x05 // Read-Only, expand-down, accessed
+#define SEG_DATA_RDWREXPD  0x06 // Read/Write, expand-down
+#define SEG_DATA_RDWREXPDA 0x07 // Read/Write, expand-down, accessed
+#define SEG_CODE_EX        0x08 // Execute-Only
+#define SEG_CODE_EXA       0x09 // Execute-Only, accessed
+#define SEG_CODE_EXRD      0x0A // Execute/Read
+#define SEG_CODE_EXRDA     0x0B // Execute/Read, accessed
+#define SEG_CODE_EXC       0x0C // Execute-Only, conforming
+#define SEG_CODE_EXCA      0x0D // Execute-Only, conforming, accessed
+#define SEG_CODE_EXRDC     0x0E // Execute/Read, conforming
+#define SEG_CODE_EXRDCA    0x0F // Execute/Read, conforming, accessed
+
+
+ 
+#define GDT_CODE_PL0 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
+                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
+                     SEG_PRIV(0)     | SEG_CODE_EXRD
+ 
+#define GDT_DATA_PL0 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
+                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
+                     SEG_PRIV(0)     | SEG_DATA_RDWR
+ 
+#define GDT_CODE_PL3 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
+                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
+                     SEG_PRIV(3)     | SEG_CODE_EXRD
+ 
+#define GDT_DATA_PL3 SEG_DESCTYPE(1) | SEG_PRES(1) | SEG_SAVL(0) | \
+                     SEG_LONG(0)     | SEG_SIZE(1) | SEG_GRAN(1) | \
+                     SEG_PRIV(3)     | SEG_DATA_RDWR
+
+
+
+uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag);

@@ -1,30 +1,24 @@
+gdtr DW 0 ; For limit storage
+     DQ 0 ; For base storage
 
-NULL_DESCRIPTOR:
-    db 0
-    dd 0x00000000
-    db 0x00
-    db 0x0
+setGdt:
+   MOV   [gdtr], DI
+   MOV   [gdtr+2], RSI
+   LGDT  [gdtr]
+   RET
 
-KERNEL_CODE_SEGMENT:
-    db 0
-    dd 0xFFFFF
-    db 0x9A
-    db 0xA
-
-KERNEL_DATA_SEGMENT:
-    db 0
-    dd 0xFFFFF
-    db 0x92
-    db 0xC
-
-USER_CODE_SEGMENT:
-    db 0
-    dd 0xFFFFF
-    db 0xFA
-    db 0xA
-
-USER_DATA_SEGMENT:
-    db 0
-    dd 0xFFFFF
-    db 0xF2
-    db 0xC
+reloadSegments:
+   ; Reload CS register:
+   PUSH 0x08                 ; Push code segment to stack, 0x08 is a stand-in for your code segment
+   LEA RAX, [rel .reload_CS] ; Load address of .reload_CS into RAX
+   PUSH RAX                  ; Push this value to the stack
+   RETFQ                     ; Perform a far return, RETFQ or LRETQ depending on syntax
+.reload_CS:
+   ; Reload data segment registers
+   MOV   AX, 0x10 ; 0x10 is a stand-in for your data segment
+   MOV   DS, AX
+   MOV   ES, AX
+   MOV   FS, AX
+   MOV   GS, AX
+   MOV   SS, AX
+   RET

@@ -1,30 +1,21 @@
 #include "GDT.h"
 
-// explaination is in GDT.h
-#define GDT_ACCESS__NULL_DESCRIPTOR 0x00
-#define GDT_ACCESS__KERNEL_CODE_SEGMENT 0x9E
-#define GDT_ACCESS__KERNEL_DATA_SEGMENT 0x92
-#define GDT_ACCESS__USER_CODE_SEGMENT 0xFE
-#define GDT_ACCESS__USER_DATA_SEGMENT 0xF2
-#define GDT_ACCESS__TSS_SEGMENT 0x89
+uint64_t create_descriptor(uint32_t base, uint32_t limit, uint16_t flag)
+{
+    uint64_t descriptor;
+ 
+    // Create the high 32 bit segment
+    descriptor  =  limit       & 0x000F0000;         // set limit bits 19:16
+    descriptor |= (flag <<  8) & 0x00F0FF00;         // set type, p, dpl, s, g, d/b, l and avl fields
+    descriptor |= (base >> 16) & 0x000000FF;         // set base bits 23:16
+    descriptor |=  base        & 0xFF000000;         // set base bits 31:24
+ 
+    // Shift by 32 to allow for low part of segment
+    descriptor <<= 32;
+ 
+    // Create the low 32 bit segment
+    descriptor |= base  << 16;                       // set base bits 15:0
+    descriptor |= limit  & 0x0000FFFF;               // set limit bits 15:0
 
-#define OFFSET_NULL_DESCRIPTOR 0x00
-#define OFFSET_KERNEL_CODE_SEGMENT 0x08
-#define OFFSET_KERNEL_DATA_SEGMENT 0x10
-#define OFFSET_USER_CODE_SEGMENT 0x18
-#define OFFSET_USER_DATA_SEGMENT 0x20
-#define OFFSET_TSS_SEGMENT 0x28
-
-#define LIMIT_NULL_DESCRIPTOR 0x00000
-#define LIMIT_KERNEL_CODE_SEGMENT 0xFFFFF
-#define LIMIT_KERNEL_DATA_SEGMENT 0xFFFFF
-#define LIMIT_USER_CODE_SEGMENT 0xFFFFF
-#define LIMIT_USER_DATA_SEGMENT 0xFFFFF
-#define LIMIT_TSS_SEGMENT sizeof(TSS)-1
-
-#define FLAGS_NULL_DESCRIPTOR 0x0
-#define FLAGS_KERNEL_CODE_SEGMENT 0xA
-#define FLAGS_KERNEL_DATA_SEGMENT 0xC
-#define FLAGS_USER_CODE_SEGMENT 0xA
-#define FLAGS_USER_DATA_SEGMENT 0xC
-#define FLAGS_TSS_SEGMENT 0x0
+    return descriptor;
+}
